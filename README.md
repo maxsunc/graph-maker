@@ -1,12 +1,12 @@
 # tree-maker
 
-An interactive website for building tree-style node diagrams with editable node text and export tools.
+An interactive website for building directed graph diagrams with editable node text and export tools.
 
 ## Product Epics
 
 1. Core Diagram Editing
 - Create, move, connect, and delete nodes.
-- Keep editing friction low with in-node title and description editing.
+- Keep editing friction low with in-node title and description editing for graph nodes.
 
 2. Node Content Authoring
 - Each node supports a short title and detailed description.
@@ -27,7 +27,7 @@ An interactive website for building tree-style node diagrams with editable node 
 3. Add Node, Save JSON, Load JSON, Export PNG (transparent), Export JPG actions.
 4. Responsive shell layout with custom styling.
 5. Versioned diagram JSON format (`schemaVersion: 1`) with forgiving import for legacy snapshots.
-6. Live tree validation rules: single root, no cycles, required title+description for each node, and export blocking when invalid.
+6. Live DAG graph validation rules: no cycles, required title+description for each node, and export blocking when invalid.
 
 ## Run Locally
 

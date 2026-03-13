@@ -1,24 +1,24 @@
-# Story 2.1: Tree Validation Rules
+# Story 2.1: Graph Validation Rules (DAG)
 
 Status: review
 
 ## Story
 
 As a diagram editor user,
-I want the app to validate my tree structure,
+I want the app to validate my graph structure,
 so that I can catch structural mistakes before sharing or exporting.
 
 ## Acceptance Criteria
 
-1. The editor validates that exactly one root node exists.
-2. The editor detects cycles and reports when the diagram is not a valid tree.
+1. The editor allows DAG structures (including multiple roots and multiple parents where acyclic).
+2. The editor detects cycles and reports when the diagram is not a valid DAG graph.
 3. The editor validates required node fields (title and description) and reports missing data.
 4. Validation feedback is visible in the UI and updates when nodes or edges change.
 
 ## Tasks / Subtasks
 
-- [x] Add validation engine for tree constraints (AC: 1, 2, 3)
-  - [x] Implement root count validation
+- [x] Add validation engine for DAG graph constraints (AC: 1, 2, 3)
+  - [x] Allow multiple roots/parents while keeping acyclic validation
   - [x] Implement directed cycle detection
   - [x] Implement required field checks for title and description
 - [x] Add UI feedback panel for validation results (AC: 4)
@@ -57,7 +57,7 @@ GPT-5.3-Codex
 
 ### Completion Notes List
 
-- Added `validateTree` engine for single-root, cycle detection, and required title/description checks.
+- Added `validateDagGraph` engine for DAG constraints, cycle detection, and required title/description checks.
 - Added live validation panel with clear valid/error status and issue list.
 - Wired validation to state changes through memoized recalculation.
 - Prevented PNG/JPG export while invalid and surfaced reason to user.
@@ -72,4 +72,4 @@ GPT-5.3-Codex
 
 ### Change Log
 
-- 2026-03-12: Implemented story 2.1 tree validation rules and marked story ready for review.
+- 2026-03-12: Implemented story 2.1 graph validation rules and marked story ready for review.
