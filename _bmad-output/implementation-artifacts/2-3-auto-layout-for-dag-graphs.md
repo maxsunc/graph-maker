@@ -23,7 +23,7 @@ so that I can quickly organize large graphs into a readable structure.
   - [x] Assign deterministic positions by level and order
 - [x] Add Auto Layout user action (AC: 1, 3)
   - [x] Add toolbar button for Auto Layout
-  - [x] Add keyboard shortcut Ctrl+L for Auto Layout
+  - [x] Add keyboard shortcut Ctrl+Alt+L for Auto Layout
 - [x] Ensure compatibility with existing features (AC: 4)
   - [x] Keep validation behavior unchanged
   - [x] Keep export actions working after layout updates
@@ -33,6 +33,7 @@ so that I can quickly organize large graphs into a readable structure.
 - Keep implementation local in src/App.tsx.
 - Avoid adding new dependencies.
 - Continue Windows-first shortcut hints.
+- Use a browser-safer shortcut combo for Auto Layout.
 
 ### Project Structure Notes
 
@@ -58,16 +59,22 @@ GPT-5.3-Codex
 
 - Added a dependency-free DAG auto-layout algorithm based on node depth levels.
 - Added deterministic placement for multiple roots and disconnected components.
-- Added Auto Layout toolbar action and Ctrl+L shortcut.
+- Added Auto Layout toolbar action and Ctrl+Alt+L shortcut.
 - Kept existing validation and export guardrails unchanged.
+- Added unit tests for layout determinism/depth behavior and shortcut resolution.
 
 ### File List
 
 - src/App.tsx
+- src/layout.ts
+- src/shortcuts.ts
+- src/layout.test.ts
+- src/shortcuts.test.ts
 - README.md
+- package.json
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 - _bmad-output/implementation-artifacts/2-3-auto-layout-for-dag-graphs.md
 
 ### Change Log
 
-- 2026-03-12: Implemented story 2.3 auto layout and marked story ready for review.
+- 2026-03-12: Implemented story 2.3 auto layout, adopted browser-safer shortcut, and added targeted unit tests.
