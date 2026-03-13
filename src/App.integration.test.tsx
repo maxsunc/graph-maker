@@ -146,12 +146,25 @@ describe("App undo/redo integration", () => {
         render(<App />);
 
         fireEvent.click(screen.getByRole("button", { name: "Add Node" }));
-        expect(screen.getByText("Validation: Issues found")).toBeTruthy();
+        expect(screen.getByText("Validation: Ready")).toBeTruthy();
+        expect(getUndoButton().disabled).toBe(false);
 
         fireEvent.click(getUndoButton());
         expect(screen.getByText("Validation: Ready")).toBeTruthy();
+        expect(getUndoButton().disabled).toBe(true);
 
         fireEvent.click(screen.getByRole("button", { name: "Save JSON" }));
         expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows Cmd/Option shortcut hints on macOS", () => {
+        vi.spyOn(window.navigator, "platform", "get").mockReturnValue("MacIntel");
+        vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Macintosh; Intel Mac OS X)");
+
+        render(<App />);
+
+        expect(screen.getByText("Cmd+Z: Undo")).toBeTruthy();
+        expect(screen.getByText("Cmd+Shift+Z: Redo")).toBeTruthy();
+        expect(screen.getByText("Cmd+Option+L: Auto Layout")).toBeTruthy();
     });
 });

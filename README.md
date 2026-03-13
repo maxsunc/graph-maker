@@ -31,11 +31,12 @@ An interactive website for building directed graph diagrams with editable node t
 7. Productivity upgrades: snap-to-grid editing and keyboard shortcuts for delete, save JSON, and export PNG.
 8. One-click DAG auto-layout with deterministic level-based positioning and Ctrl+Alt+L shortcut.
 9. Undo/Redo history controls with toolbar buttons and Windows shortcuts (`Ctrl+Z`, `Ctrl+Shift+Z`).
+10. Platform-aware shortcut hints in UI (`Cmd`/`Option` on macOS, `Ctrl`/`Alt` on Windows/Linux).
 
 ## Notes
 
-1. Current shortcut hints assume Windows key labels (`Ctrl+...`).
-2. Future enhancement: platform-aware shortcut hints (`Cmd` on macOS).
+1. Shortcut hints are platform-aware (`Cmd`/`Option` for macOS, `Ctrl`/`Alt` otherwise).
+2. Shortcut handling supports both `Ctrl` and `Cmd` modifiers.
 3. Auto Layout uses `Ctrl+Alt+L` to avoid common browser conflicts.
 4. Redo uses `Ctrl+Shift+Z` in this Windows-first implementation.
 

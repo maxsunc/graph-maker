@@ -229,6 +229,8 @@ export default function App() {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const dragStartSnapshotRef = useRef<GraphSnapshot | null>(null);
+  const reactFlowInstanceRef = useRef<{ fitView: (options?: { padding?: number; duration?: number }) => void } | null>(null);
+  const previousNodeCountRef = useRef(nodes.length);
 
   const applyPresentUpdate = useCallback(
     (updater: (present: GraphSnapshot) => GraphSnapshot, shouldTrack = true) => {
@@ -261,6 +263,26 @@ export default function App() {
 
   const hasUndo = historyState.past.length > 0;
   const hasRedo = historyState.future.length > 0;
+
+  const isMacPlatform = useMemo(() => {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+    const platformInfo = `${navigator.platform} ${navigator.userAgent}`.toLowerCase();
+    return platformInfo.includes("mac");
+  }, []);
+
+  const shortcutHints = useMemo(() => {
+    const mod = isMacPlatform ? "Cmd" : "Ctrl";
+    const alt = isMacPlatform ? "Option" : "Alt";
+    return {
+      undo: `${mod}+Z: Undo`,
+      redo: `${mod}+Shift+Z: Redo`,
+      save: `${mod}+S: Save JSON`,
+      autoLayout: `${mod}+${alt}+L: Auto Layout`,
+      exportPng: `${mod}+E: Export PNG`
+    };
+  }, [isMacPlatform]);
 
   const updateNodeData = useCallback(
     (id: string, patch: Partial<Omit<TreeNodeData, "onChange">>) => {
@@ -386,7 +408,7 @@ export default function App() {
             position: nextNodePosition(present.nodes.length),
             data: {
               title: `Node ${present.nodes.length + 1}`,
-              description: "",
+              description: "Describe this node.",
               onChange: updateNodeData
             }
           }
@@ -496,6 +518,16 @@ export default function App() {
       setSelectedNodeId(null);
     }
   }, [nodes, selectedNodeId]);
+
+  useEffect(() => {
+    if (nodes.length === previousNodeCountRef.current) {
+      return;
+    }
+    previousNodeCountRef.current = nodes.length;
+    requestAnimationFrame(() => {
+      reactFlowInstanceRef.current?.fitView({ padding: 0.2, duration: 180 });
+    });
+  }, [nodes.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -682,12 +714,12 @@ export default function App() {
 
       <section className="shortcuts-panel">
         <strong>Shortcuts</strong>
-        <span>Ctrl+Z: Undo</span>
-        <span>Ctrl+Shift+Z: Redo</span>
+        <span>{shortcutHints.undo}</span>
+        <span>{shortcutHints.redo}</span>
         <span>Delete or Backspace: Delete selected node</span>
-        <span>Ctrl+S: Save JSON</span>
-        <span>Ctrl+Alt+L: Auto Layout</span>
-        <span>Ctrl+E: Export PNG</span>
+        <span>{shortcutHints.save}</span>
+        <span>{shortcutHints.autoLayout}</span>
+        <span>{shortcutHints.exportPng}</span>
       </section>
 
       <input
@@ -715,6 +747,9 @@ export default function App() {
           fitView
           fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}
+          onInit={(instance) => {
+            reactFlowInstanceRef.current = instance;
+          }}
         >
           <Background color="rgba(17, 34, 68, 0.16)" gap={22} />
           <MiniMap pannable zoomable className="mini-map" />
