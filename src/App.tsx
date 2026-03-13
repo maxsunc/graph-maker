@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   Background,
   Controls,
@@ -350,6 +350,33 @@ export default function App() {
     uploadRef.current?.click();
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const key = event.key.toLowerCase();
+      const isModifier = event.ctrlKey || event.metaKey;
+
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedNodeId) {
+        event.preventDefault();
+        onDeleteSelected();
+        return;
+      }
+
+      if (isModifier && key === "s") {
+        event.preventDefault();
+        onSaveJson();
+        return;
+      }
+
+      if (isModifier && key === "e") {
+        event.preventDefault();
+        void onExportPng();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onDeleteSelected, onExportPng, onSaveJson, selectedNodeId]);
+
   const onLoadJson = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -465,6 +492,13 @@ export default function App() {
         )}
       </section>
 
+      <section className="shortcuts-panel">
+        <strong>Shortcuts</strong>
+        <span>Delete or Backspace: Delete selected node</span>
+        <span>Ctrl/Cmd+S: Save JSON</span>
+        <span>Ctrl/Cmd+E: Export PNG</span>
+      </section>
+
       <input
         ref={uploadRef}
         type="file"
@@ -478,6 +512,8 @@ export default function App() {
           nodes={hydratedNodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          snapToGrid
+          snapGrid={[24, 24]}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
