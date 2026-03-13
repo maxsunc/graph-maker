@@ -4,6 +4,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  MarkerType,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
@@ -87,6 +88,7 @@ const seedNodes: Node<TreeNodeData>[] = [
 ];
 
 const seedEdges: Edge[] = [];
+const graphEdgeColor = "#1c3f78";
 
 function downloadDataUrl(dataUrl: string, filename: string): void {
   const a = document.createElement("a");
@@ -118,6 +120,16 @@ function isTextInputFocused(): boolean {
   }
   const tag = active.tagName.toLowerCase();
   return tag === "input" || tag === "textarea";
+}
+
+function includeInExport(node: HTMLElement): boolean {
+  if (!("classList" in node)) {
+    return true;
+  }
+  if (node.classList.contains("react-flow__minimap") || node.classList.contains("mini-map")) {
+    return false;
+  }
+  return true;
 }
 
 function validateDagGraph(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationResult {
@@ -388,7 +400,17 @@ export default function App() {
         {
           ...connection,
           id: `e-${connection.source}-${connection.target}-${Date.now()}`,
-          type: "smoothstep"
+          type: "smoothstep",
+          style: {
+            stroke: graphEdgeColor,
+            strokeWidth: 2.6
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: graphEdgeColor,
+            width: 20,
+            height: 20
+          }
         },
         present.edges
       )
@@ -439,12 +461,17 @@ export default function App() {
     if (!canvasRef.current) {
       return;
     }
-    const dataUrl = await toPng(canvasRef.current, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor: "transparent"
-    });
-    downloadDataUrl(dataUrl, "graph-diagram.png");
+    try {
+      const dataUrl = await toPng(canvasRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "transparent",
+        filter: includeInExport
+      });
+      downloadDataUrl(dataUrl, "graph-diagram.png");
+    } catch {
+      window.alert("PNG export failed. Please try again.");
+    }
   }, [validation.isValid]);
 
   const onExportJpg = useCallback(async () => {
@@ -455,13 +482,18 @@ export default function App() {
     if (!canvasRef.current) {
       return;
     }
-    const dataUrl = await toJpeg(canvasRef.current, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor: "#ffffff",
-      quality: 0.95
-    });
-    downloadDataUrl(dataUrl, "graph-diagram.jpg");
+    try {
+      const dataUrl = await toJpeg(canvasRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        quality: 0.95,
+        filter: includeInExport
+      });
+      downloadDataUrl(dataUrl, "graph-diagram.jpg");
+    } catch {
+      window.alert("JPG export failed. Please try again.");
+    }
   }, [validation.isValid]);
 
   const onSaveJson = useCallback(() => {
@@ -654,7 +686,17 @@ export default function App() {
               id: makeUniqueId(edgeIdBase, usedEdgeIds, `e-${index + 1}`),
               source,
               target,
-              type: typeof edge.type === "string" ? edge.type : "smoothstep"
+              type: typeof edge.type === "string" ? edge.type : "smoothstep",
+              style: {
+                stroke: graphEdgeColor,
+                strokeWidth: 2.6
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: graphEdgeColor,
+                width: 20,
+                height: 20
+              }
             };
           })
           .filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target));
@@ -744,6 +786,24 @@ export default function App() {
           onNodeDragStop={onNodeDragStop}
           onNodeClick={(_, node) => setSelectedNodeId(node.id)}
           onPaneClick={() => setSelectedNodeId(null)}
+          defaultEdgeOptions={{
+            type: "smoothstep",
+            style: {
+              stroke: graphEdgeColor,
+              strokeWidth: 2.6
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: graphEdgeColor,
+              width: 20,
+              height: 20
+            },
+            interactionWidth: 32
+          }}
+          connectionLineStyle={{
+            stroke: graphEdgeColor,
+            strokeWidth: 2.4
+          }}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}
