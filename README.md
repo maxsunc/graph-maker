@@ -29,6 +29,7 @@ An interactive website for building directed graph diagrams with editable node t
 5. Versioned diagram JSON format (`schemaVersion: 1`) with forgiving import for legacy snapshots.
 6. Live DAG graph validation rules: no cycles, required title+description for each node, and export blocking when invalid.
 7. Productivity upgrades: snap-to-grid editing and keyboard shortcuts for delete, save JSON, and export PNG.
+8. One-click DAG auto-layout with deterministic level-based positioning and Ctrl+L shortcut.
 
 ## Notes
 

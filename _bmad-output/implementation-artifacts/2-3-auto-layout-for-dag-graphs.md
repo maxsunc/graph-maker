@@ -1,6 +1,6 @@
 # Story 2.3: Auto Layout for DAG Graphs
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,16 +17,16 @@ so that I can quickly organize large graphs into a readable structure.
 
 ## Tasks / Subtasks
 
-- [ ] Add layout computation for DAG graphs (AC: 2)
-  - [ ] Compute node depth levels from incoming edges
-  - [ ] Handle multiple roots and disconnected components
-  - [ ] Assign deterministic positions by level and order
-- [ ] Add Auto Layout user action (AC: 1, 3)
-  - [ ] Add toolbar button for Auto Layout
-  - [ ] Add keyboard shortcut Ctrl+L for Auto Layout
-- [ ] Ensure compatibility with existing features (AC: 4)
-  - [ ] Keep validation behavior unchanged
-  - [ ] Keep export actions working after layout updates
+- [x] Add layout computation for DAG graphs (AC: 2)
+  - [x] Compute node depth levels from incoming edges
+  - [x] Handle multiple roots and disconnected components
+  - [x] Assign deterministic positions by level and order
+- [x] Add Auto Layout user action (AC: 1, 3)
+  - [x] Add toolbar button for Auto Layout
+  - [x] Add keyboard shortcut Ctrl+L for Auto Layout
+- [x] Ensure compatibility with existing features (AC: 4)
+  - [x] Keep validation behavior unchanged
+  - [x] Keep export actions working after layout updates
 
 ## Dev Notes
 
@@ -52,8 +52,22 @@ GPT-5.3-Codex
 
 ### Debug Log References
 
+- npm run build
+
 ### Completion Notes List
+
+- Added a dependency-free DAG auto-layout algorithm based on node depth levels.
+- Added deterministic placement for multiple roots and disconnected components.
+- Added Auto Layout toolbar action and Ctrl+L shortcut.
+- Kept existing validation and export guardrails unchanged.
 
 ### File List
 
+- src/App.tsx
+- README.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/2-3-auto-layout-for-dag-graphs.md
+
 ### Change Log
+
+- 2026-03-12: Implemented story 2.3 auto layout and marked story ready for review.
