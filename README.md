@@ -24,8 +24,9 @@ An interactive website for building tree-style node diagrams with editable node 
 
 1. React Flow-based editor with draggable, connectable nodes.
 2. Custom node card with editable title and description.
-3. Add Node, Export PNG (transparent), Export JPG actions.
+3. Add Node, Save JSON, Load JSON, Export PNG (transparent), Export JPG actions.
 4. Responsive shell layout with custom styling.
+5. Versioned diagram JSON format (`schemaVersion: 1`) with forgiving import for legacy snapshots.
 
 ## Run Locally
 

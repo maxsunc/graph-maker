@@ -102,6 +102,10 @@ button:disabled {
   box-shadow: 0 8px 18px rgba(30, 168, 158, 0.3);
 }
 
+.file-input {
+  display: none;
+}
+
 .canvas-wrap {
   border-radius: 20px;
   overflow: hidden;

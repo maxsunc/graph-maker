@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   Background,
   Controls,
@@ -23,6 +23,36 @@ type TreeNodeData = {
   description: string;
   selected?: boolean;
   onChange: (id: string, patch: Partial<Omit<TreeNodeData, "onChange">>) => void;
+};
+
+type DiagramNodeRecord = {
+  id: string;
+  position: { x: number; y: number };
+  title: string;
+  description: string;
+};
+
+type DiagramEdgeRecord = {
+  id: string;
+  source: string;
+  target: string;
+  type?: string;
+};
+
+type DiagramSnapshotV1 = {
+  schemaVersion: 1;
+  nodes: DiagramNodeRecord[];
+  edges: DiagramEdgeRecord[];
+};
+
+type LegacyDiagramSnapshot = {
+  nodes?: Array<
+    Partial<Node<{ title?: string; description?: string }>> & {
+      title?: string;
+      description?: string;
+    }
+  >;
+  edges?: Array<Partial<Edge>>;
 };
 
 const nextNodePosition = (count: number) => ({
@@ -50,6 +80,22 @@ function downloadDataUrl(dataUrl: string, filename: string): void {
   a.href = dataUrl;
   a.download = filename;
   a.click();
+}
+
+function makeUniqueId(base: string, used: Set<string>, prefix: string): string {
+  const normalized = base.trim().length > 0 ? base : prefix;
+  if (!used.has(normalized)) {
+    used.add(normalized);
+    return normalized;
+  }
+
+  let i = 2;
+  while (used.has(`${normalized}-${i}`)) {
+    i += 1;
+  }
+  const unique = `${normalized}-${i}`;
+  used.add(unique);
+  return unique;
 }
 
 function TreeNode({ id, data }: { id: string; data: TreeNodeData }) {
@@ -87,6 +133,7 @@ export default function App() {
   const [edges, setEdges] = useState<Edge[]>(seedEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const uploadRef = useRef<HTMLInputElement | null>(null);
 
   const updateNodeData = useCallback(
     (id: string, patch: Partial<Omit<TreeNodeData, "onChange">>) => {
@@ -199,6 +246,115 @@ export default function App() {
     downloadDataUrl(dataUrl, "tree-diagram.jpg");
   }, []);
 
+  const onSaveJson = useCallback(() => {
+    const payload: DiagramSnapshotV1 = {
+      schemaVersion: 1,
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        position: node.position,
+        title: node.data.title,
+        description: node.data.description
+      })),
+      edges: edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type
+      }))
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    downloadDataUrl(url, "tree-diagram.json");
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [edges, nodes]);
+
+  const onChooseJsonFile = useCallback(() => {
+    uploadRef.current?.click();
+  }, []);
+
+  const onLoadJson = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) {
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text) as Partial<DiagramSnapshotV1 & LegacyDiagramSnapshot>;
+        const parsedNodes = parsed.nodes;
+        const parsedEdges = parsed.edges;
+        if (!Array.isArray(parsedNodes) || !Array.isArray(parsedEdges)) {
+          throw new Error("Invalid diagram format");
+        }
+
+        const usedNodeIds = new Set<string>();
+        const rawToUniqueId = new Map<string, string>();
+        const loadedNodes: Node<TreeNodeData>[] = parsedNodes.map((node, index) => {
+          const rawId = typeof node.id === "string" ? node.id : `n-${index + 1}`;
+          const uniqueId = makeUniqueId(rawId, usedNodeIds, `n-${index + 1}`);
+          if (!rawToUniqueId.has(rawId)) {
+            rawToUniqueId.set(rawId, uniqueId);
+          }
+
+          const titleFromSchema = "title" in node && typeof node.title === "string" ? node.title : undefined;
+          const descFromSchema = "description" in node && typeof node.description === "string" ? node.description : undefined;
+
+          const legacyData =
+            "data" in node && node.data && typeof node.data === "object"
+              ? (node.data as { title?: unknown; description?: unknown })
+              : undefined;
+
+          const titleFromLegacyData = typeof legacyData?.title === "string" ? legacyData.title : undefined;
+          const descFromLegacyData =
+            typeof legacyData?.description === "string" ? legacyData.description : undefined;
+
+          const position =
+            node.position && typeof node.position.x === "number" && typeof node.position.y === "number"
+              ? node.position
+              : nextNodePosition(index);
+
+          return {
+            id: uniqueId,
+            type: "treeNode",
+            position,
+            data: {
+              title: titleFromSchema ?? titleFromLegacyData ?? `Node ${index + 1}`,
+              description: descFromSchema ?? descFromLegacyData ?? "",
+              onChange: updateNodeData
+            }
+          };
+        });
+
+        const nodeIdSet = new Set(loadedNodes.map((node) => node.id));
+        const usedEdgeIds = new Set<string>();
+        const loadedEdges: Edge[] = parsedEdges
+          .map((edge, index) => {
+            const sourceRaw = typeof edge.source === "string" ? edge.source : "";
+            const targetRaw = typeof edge.target === "string" ? edge.target : "";
+            const source = rawToUniqueId.get(sourceRaw) ?? sourceRaw;
+            const target = rawToUniqueId.get(targetRaw) ?? targetRaw;
+            const edgeIdBase = typeof edge.id === "string" ? edge.id : `e-${index + 1}`;
+            return {
+              id: makeUniqueId(edgeIdBase, usedEdgeIds, `e-${index + 1}`),
+              source,
+              target,
+              type: typeof edge.type === "string" ? edge.type : "smoothstep"
+            };
+          })
+          .filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target));
+
+        setNodes(loadedNodes.length > 0 ? loadedNodes : seedNodes);
+        setEdges(loadedEdges);
+        setSelectedNodeId(null);
+      } catch {
+        window.alert("Could not load this JSON file. Please select a valid tree-diagram export.");
+      }
+    },
+    [updateNodeData]
+  );
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -211,10 +367,20 @@ export default function App() {
           <button onClick={onDeleteSelected} disabled={!selectedNodeId}>
             Delete Selected
           </button>
+          <button onClick={onSaveJson}>Save JSON</button>
+          <button onClick={onChooseJsonFile}>Load JSON</button>
           <button onClick={onExportPng}>Export PNG</button>
           <button onClick={onExportJpg}>Export JPG</button>
         </div>
       </header>
+
+      <input
+        ref={uploadRef}
+        type="file"
+        accept="application/json,.json"
+        onChange={onLoadJson}
+        className="file-input"
+      />
 
       <section className="canvas-wrap" ref={canvasRef}>
         <ReactFlow
