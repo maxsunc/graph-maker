@@ -27,6 +27,7 @@ An interactive website for building tree-style node diagrams with editable node 
 3. Add Node, Save JSON, Load JSON, Export PNG (transparent), Export JPG actions.
 4. Responsive shell layout with custom styling.
 5. Versioned diagram JSON format (`schemaVersion: 1`) with forgiving import for legacy snapshots.
+6. Live tree validation rules: single root, no cycles, required title+description for each node, and export blocking when invalid.
 
 ## Run Locally
 

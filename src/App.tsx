@@ -55,6 +55,11 @@ type LegacyDiagramSnapshot = {
   edges?: Array<Partial<Edge>>;
 };
 
+type ValidationResult = {
+  isValid: boolean;
+  errors: string[];
+};
+
 const nextNodePosition = (count: number) => ({
   x: 80 + (count % 4) * 250,
   y: 60 + Math.floor(count / 4) * 170
@@ -96,6 +101,77 @@ function makeUniqueId(base: string, used: Set<string>, prefix: string): string {
   const unique = `${normalized}-${i}`;
   used.add(unique);
   return unique;
+}
+
+function validateTree(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationResult {
+  const errors: string[] = [];
+  if (nodes.length === 0) {
+    errors.push("Add at least one node.");
+    return { isValid: false, errors };
+  }
+
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const incomingCounts = new Map<string, number>(nodes.map((node) => [node.id, 0]));
+  const adjacency = new Map<string, string[]>(nodes.map((node) => [node.id, []]));
+
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
+      continue;
+    }
+    incomingCounts.set(edge.target, (incomingCounts.get(edge.target) ?? 0) + 1);
+    adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
+  }
+
+  const roots = nodes.filter((node) => (incomingCounts.get(node.id) ?? 0) === 0);
+  if (roots.length !== 1) {
+    errors.push(`A valid tree needs exactly 1 root node. Found ${roots.length}.`);
+  }
+
+  for (const node of nodes) {
+    if (!node.data.title.trim()) {
+      errors.push(`Node ${node.id} is missing a title.`);
+    }
+    if (!node.data.description.trim()) {
+      errors.push(`Node ${node.id} is missing a description.`);
+    }
+  }
+
+  const state = new Map<string, 0 | 1 | 2>();
+  let hasCycle = false;
+
+  const visit = (id: string): void => {
+    if (hasCycle) {
+      return;
+    }
+    const current = state.get(id) ?? 0;
+    if (current === 1) {
+      hasCycle = true;
+      return;
+    }
+    if (current === 2) {
+      return;
+    }
+    state.set(id, 1);
+    for (const next of adjacency.get(id) ?? []) {
+      visit(next);
+    }
+    state.set(id, 2);
+  };
+
+  for (const node of nodes) {
+    if ((state.get(node.id) ?? 0) === 0) {
+      visit(node.id);
+    }
+  }
+
+  if (hasCycle) {
+    errors.push("Cycle detected. Trees cannot contain loops.");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
 }
 
 function TreeNode({ id, data }: { id: string; data: TreeNodeData }) {
@@ -167,6 +243,7 @@ export default function App() {
       })),
     [nodes, selectedNodeId, updateNodeData]
   );
+  const validation = useMemo(() => validateTree(nodes, edges), [nodes, edges]);
 
   const nodeTypes = useMemo(() => ({ treeNode: TreeNode }), []);
 
@@ -222,6 +299,10 @@ export default function App() {
   }, [selectedNodeId]);
 
   const onExportPng = useCallback(async () => {
+    if (!validation.isValid) {
+      window.alert("Fix validation errors before exporting PNG.");
+      return;
+    }
     if (!canvasRef.current) {
       return;
     }
@@ -231,9 +312,13 @@ export default function App() {
       backgroundColor: "transparent"
     });
     downloadDataUrl(dataUrl, "tree-diagram.png");
-  }, []);
+  }, [validation.isValid]);
 
   const onExportJpg = useCallback(async () => {
+    if (!validation.isValid) {
+      window.alert("Fix validation errors before exporting JPG.");
+      return;
+    }
     if (!canvasRef.current) {
       return;
     }
@@ -244,7 +329,7 @@ export default function App() {
       quality: 0.95
     });
     downloadDataUrl(dataUrl, "tree-diagram.jpg");
-  }, []);
+  }, [validation.isValid]);
 
   const onSaveJson = useCallback(() => {
     const payload: DiagramSnapshotV1 = {
@@ -373,6 +458,19 @@ export default function App() {
           <button onClick={onExportJpg}>Export JPG</button>
         </div>
       </header>
+
+      <section className={`validation-panel ${validation.isValid ? "ok" : "error"}`}>
+        <strong>{validation.isValid ? "Validation: Ready" : "Validation: Issues found"}</strong>
+        {validation.isValid ? (
+          <span>Your diagram is a valid tree and ready to export.</span>
+        ) : (
+          <ul>
+            {validation.errors.map((err) => (
+              <li key={err}>{err}</li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <input
         ref={uploadRef}
