@@ -103,7 +103,7 @@ function makeUniqueId(base: string, used: Set<string>, prefix: string): string {
   return unique;
 }
 
-function validateTree(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationResult {
+function validateDagGraph(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationResult {
   const errors: string[] = [];
   if (nodes.length === 0) {
     errors.push("Add at least one node.");
@@ -111,20 +111,13 @@ function validateTree(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationRes
   }
 
   const nodeIds = new Set(nodes.map((node) => node.id));
-  const incomingCounts = new Map<string, number>(nodes.map((node) => [node.id, 0]));
   const adjacency = new Map<string, string[]>(nodes.map((node) => [node.id, []]));
 
   for (const edge of edges) {
     if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
       continue;
     }
-    incomingCounts.set(edge.target, (incomingCounts.get(edge.target) ?? 0) + 1);
     adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
-  }
-
-  const roots = nodes.filter((node) => (incomingCounts.get(node.id) ?? 0) === 0);
-  if (roots.length !== 1) {
-    errors.push(`A valid tree needs exactly 1 root node. Found ${roots.length}.`);
   }
 
   for (const node of nodes) {
@@ -165,7 +158,7 @@ function validateTree(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationRes
   }
 
   if (hasCycle) {
-    errors.push("Cycle detected. Trees cannot contain loops.");
+    errors.push("Cycle detected. A DAG graph cannot contain loops.");
   }
 
   return {
@@ -243,7 +236,7 @@ export default function App() {
       })),
     [nodes, selectedNodeId, updateNodeData]
   );
-  const validation = useMemo(() => validateTree(nodes, edges), [nodes, edges]);
+  const validation = useMemo(() => validateDagGraph(nodes, edges), [nodes, edges]);
 
   const nodeTypes = useMemo(() => ({ treeNode: TreeNode }), []);
 
@@ -300,7 +293,7 @@ export default function App() {
 
   const onExportPng = useCallback(async () => {
     if (!validation.isValid) {
-      window.alert("Fix validation errors before exporting PNG.");
+      window.alert("Fix validation errors before exporting PNG graph.");
       return;
     }
     if (!canvasRef.current) {
@@ -316,7 +309,7 @@ export default function App() {
 
   const onExportJpg = useCallback(async () => {
     if (!validation.isValid) {
-      window.alert("Fix validation errors before exporting JPG.");
+      window.alert("Fix validation errors before exporting JPG graph.");
       return;
     }
     if (!canvasRef.current) {
@@ -434,7 +427,7 @@ export default function App() {
         setEdges(loadedEdges);
         setSelectedNodeId(null);
       } catch {
-        window.alert("Could not load this JSON file. Please select a valid tree-diagram export.");
+        window.alert("Could not load this JSON file. Please select a valid graph-diagram export.");
       }
     },
     [updateNodeData]
@@ -444,8 +437,8 @@ export default function App() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <h1>Tree Maker</h1>
-          <p>Build node trees, add details, and export your diagram.</p>
+          <h1>Graph Maker</h1>
+          <p>Build directed graphs, add details, and export your diagram.</p>
         </div>
         <div className="actions">
           <button onClick={onAddNode}>Add Node</button>
@@ -462,7 +455,7 @@ export default function App() {
       <section className={`validation-panel ${validation.isValid ? "ok" : "error"}`}>
         <strong>{validation.isValid ? "Validation: Ready" : "Validation: Issues found"}</strong>
         {validation.isValid ? (
-          <span>Your diagram is a valid tree and ready to export.</span>
+          <span>Your diagram is a valid DAG graph and ready to export.</span>
         ) : (
           <ul>
             {validation.errors.map((err) => (
