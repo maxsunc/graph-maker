@@ -92,12 +92,12 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.actions button:nth-child(2) {
+.actions .btn-danger {
   background: linear-gradient(135deg, var(--danger), #e25757);
   box-shadow: 0 8px 18px rgba(198, 40, 40, 0.26);
 }
 
-.actions button:nth-child(4) {
+.actions .btn-alt {
   background: linear-gradient(135deg, var(--accent-2), #1bc1b4);
   box-shadow: 0 8px 18px rgba(30, 168, 158, 0.3);
 }

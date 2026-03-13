@@ -16,6 +16,7 @@ import {
   Position
 } from "reactflow";
 import { toJpeg, toPng } from "html-to-image";
+import { pushHistory, redoHistory, resetHistory, undoHistory, type GraphHistoryState } from "./history";
 import { computeAutoLayout } from "./layout";
 import { resolveShortcutAction } from "./shortcuts";
 import "reactflow/dist/style.css";
@@ -60,6 +61,11 @@ type LegacyDiagramSnapshot = {
 type ValidationResult = {
   isValid: boolean;
   errors: string[];
+};
+
+type GraphSnapshot = {
+  nodes: Node<TreeNodeData>[];
+  edges: Edge[];
 };
 
 const nextNodePosition = (count: number) => ({
@@ -209,30 +215,71 @@ function TreeNode({ id, data }: { id: string; data: TreeNodeData }) {
 }
 
 export default function App() {
-  const [nodes, setNodes] = useState<Node<TreeNodeData>[]>(seedNodes);
-  const [edges, setEdges] = useState<Edge[]>(seedEdges);
+  const [historyState, setHistoryState] = useState<GraphHistoryState<Node<TreeNodeData>, Edge>>({
+    past: [],
+    present: {
+      nodes: seedNodes,
+      edges: seedEdges
+    },
+    future: []
+  });
+  const nodes = historyState.present.nodes;
+  const edges = historyState.present.edges;
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
 
-  const updateNodeData = useCallback(
-    (id: string, patch: Partial<Omit<TreeNodeData, "onChange">>) => {
-      setNodes((curr) =>
-        curr.map((node) =>
-          node.id === id
-            ? {
-                ...node,
-                data: {
-                  ...node.data,
-                  ...patch,
-                  onChange: updateNodeData
-                }
-              }
-            : node
-        )
-      );
+  const applyPresentUpdate = useCallback(
+    (updater: (present: GraphSnapshot) => GraphSnapshot, shouldTrack = true) => {
+      setHistoryState((current) => {
+        const nextPresent = updater(current.present);
+        const unchanged =
+          nextPresent.nodes === current.present.nodes && nextPresent.edges === current.present.edges;
+        if (unchanged) {
+          return current;
+        }
+        if (!shouldTrack) {
+          return {
+            ...current,
+            present: nextPresent
+          };
+        }
+        return pushHistory(current, nextPresent);
+      });
     },
     []
+  );
+
+  const onUndo = useCallback(() => {
+    setHistoryState((current) => undoHistory(current));
+  }, []);
+
+  const onRedo = useCallback(() => {
+    setHistoryState((current) => redoHistory(current));
+  }, []);
+
+  const hasUndo = historyState.past.length > 0;
+  const hasRedo = historyState.future.length > 0;
+
+  const updateNodeData = useCallback(
+    (id: string, patch: Partial<Omit<TreeNodeData, "onChange">>) => {
+      applyPresentUpdate((present) => ({
+        ...present,
+        nodes: present.nodes.map((node) =>
+          node.id === id
+            ? {
+              ...node,
+              data: {
+                ...node.data,
+                ...patch,
+                onChange: updateNodeData
+              }
+            }
+            : node
+        )
+      }));
+    },
+    [applyPresentUpdate]
   );
 
   const hydratedNodes = useMemo(
@@ -252,55 +299,76 @@ export default function App() {
   const nodeTypes = useMemo(() => ({ treeNode: TreeNode }), []);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((current) => applyNodeChanges(changes, current));
-  }, []);
+    const shouldTrack = changes.some((change) => change.type !== "select");
+    applyPresentUpdate(
+      (present) => ({
+        ...present,
+        nodes: applyNodeChanges(changes, present.nodes)
+      }),
+      shouldTrack
+    );
+  }, [applyPresentUpdate]);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges((current) => applyEdgeChanges(changes, current));
-  }, []);
+    const shouldTrack = changes.some((change) => change.type !== "select");
+    applyPresentUpdate(
+      (present) => ({
+        ...present,
+        edges: applyEdgeChanges(changes, present.edges)
+      }),
+      shouldTrack
+    );
+  }, [applyPresentUpdate]);
 
   const onConnect = useCallback((connection: Connection) => {
-    setEdges((current) =>
-      addEdge(
+    applyPresentUpdate((present) => ({
+      ...present,
+      edges: addEdge(
         {
           ...connection,
           id: `e-${connection.source}-${connection.target}-${Date.now()}`,
           type: "smoothstep"
         },
-        current
+        present.edges
       )
-    );
-  }, []);
+    }));
+  }, [applyPresentUpdate]);
 
   const onAddNode = useCallback(() => {
-    setNodes((curr) => {
-      const id = `n-${curr.length + 1}`;
-      return [
-        ...curr,
+    applyPresentUpdate((present) => {
+      const id = `n-${present.nodes.length + 1}`;
+      return {
+        ...present,
+        nodes: [
+          ...present.nodes,
         {
           id,
           type: "treeNode",
-          position: nextNodePosition(curr.length),
+          position: nextNodePosition(present.nodes.length),
           data: {
-            title: `Node ${curr.length + 1}`,
+            title: `Node ${present.nodes.length + 1}`,
             description: "",
             onChange: updateNodeData
           }
         }
-      ];
+        ]
+      };
     });
-  }, [updateNodeData]);
+  }, [applyPresentUpdate, updateNodeData]);
 
   const onDeleteSelected = useCallback(() => {
     if (!selectedNodeId) {
       return;
     }
-    setNodes((curr) => curr.filter((node) => node.id !== selectedNodeId));
-    setEdges((curr) =>
-      curr.filter((edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId)
-    );
+    applyPresentUpdate((present) => ({
+      ...present,
+      nodes: present.nodes.filter((node) => node.id !== selectedNodeId),
+      edges: present.edges.filter(
+        (edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId
+      )
+    }));
     setSelectedNodeId(null);
-  }, [selectedNodeId]);
+  }, [applyPresentUpdate, selectedNodeId]);
 
   const onExportPng = useCallback(async () => {
     if (!validation.isValid) {
@@ -362,14 +430,23 @@ export default function App() {
   }, []);
 
   const onAutoLayout = useCallback(() => {
-    setNodes((curr) => {
-      const positions = computeAutoLayout(curr, edges);
-      return curr.map((node) => ({
-        ...node,
-        position: positions.get(node.id) ?? node.position
-      }));
+    applyPresentUpdate((present) => {
+      const positions = computeAutoLayout(present.nodes, present.edges);
+      return {
+        ...present,
+        nodes: present.nodes.map((node) => ({
+          ...node,
+          position: positions.get(node.id) ?? node.position
+        }))
+      };
     });
-  }, [edges]);
+  }, [applyPresentUpdate]);
+
+  useEffect(() => {
+    if (selectedNodeId && !nodes.some((node) => node.id === selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [nodes, selectedNodeId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -380,7 +457,9 @@ export default function App() {
         altKey: event.altKey,
         shiftKey: event.shiftKey,
         isTextInputFocused: isTextInputFocused(),
-        hasSelectedNode: Boolean(selectedNodeId)
+        hasSelectedNode: Boolean(selectedNodeId),
+        hasUndo,
+        hasRedo
       });
       if (!action) {
         return;
@@ -401,12 +480,30 @@ export default function App() {
       }
       if (action === "autoLayout") {
         onAutoLayout();
+        return;
+      }
+      if (action === "undo") {
+        onUndo();
+        return;
+      }
+      if (action === "redo") {
+        onRedo();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onAutoLayout, onDeleteSelected, onExportPng, onSaveJson, selectedNodeId]);
+  }, [
+    hasRedo,
+    hasUndo,
+    onAutoLayout,
+    onDeleteSelected,
+    onExportPng,
+    onRedo,
+    onSaveJson,
+    onUndo,
+    selectedNodeId
+  ]);
 
   const onLoadJson = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -481,8 +578,12 @@ export default function App() {
           })
           .filter((edge) => nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target));
 
-        setNodes(loadedNodes.length > 0 ? loadedNodes : seedNodes);
-        setEdges(loadedEdges);
+        setHistoryState(
+          resetHistory({
+            nodes: loadedNodes.length > 0 ? loadedNodes : seedNodes,
+            edges: loadedEdges
+          })
+        );
         setSelectedNodeId(null);
       } catch {
         window.alert("Could not load this JSON file. Please select a valid graph-diagram export.");
@@ -499,13 +600,19 @@ export default function App() {
           <p>Build directed graphs, add details, and export your diagram.</p>
         </div>
         <div className="actions">
+          <button onClick={onUndo} disabled={!hasUndo}>
+            Undo
+          </button>
+          <button onClick={onRedo} disabled={!hasRedo}>
+            Redo
+          </button>
           <button onClick={onAddNode}>Add Node</button>
-          <button onClick={onDeleteSelected} disabled={!selectedNodeId}>
+          <button className="btn-danger" onClick={onDeleteSelected} disabled={!selectedNodeId}>
             Delete Selected
           </button>
           <button onClick={onSaveJson}>Save JSON</button>
-          <button onClick={onChooseJsonFile}>Load JSON</button>
-          <button onClick={onAutoLayout}>Auto Layout</button>
+          <button className="btn-alt" onClick={onChooseJsonFile}>Load JSON</button>
+          <button className="btn-alt" onClick={onAutoLayout}>Auto Layout</button>
           <button onClick={onExportPng}>Export PNG</button>
           <button onClick={onExportJpg}>Export JPG</button>
         </div>
@@ -526,6 +633,8 @@ export default function App() {
 
       <section className="shortcuts-panel">
         <strong>Shortcuts</strong>
+        <span>Ctrl+Z: Undo</span>
+        <span>Ctrl+Shift+Z: Redo</span>
         <span>Delete or Backspace: Delete selected node</span>
         <span>Ctrl+S: Save JSON</span>
         <span>Ctrl+Alt+L: Auto Layout</span>
