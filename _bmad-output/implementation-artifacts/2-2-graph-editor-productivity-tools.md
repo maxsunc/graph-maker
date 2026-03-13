@@ -1,6 +1,6 @@
 # Story 2.2: Graph Editor Productivity Tools
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,16 +17,16 @@ so that I can build and adjust diagrams with less friction.
 
 ## Tasks / Subtasks
 
-- [ ] Add snap-to-grid editing behavior (AC: 1)
-  - [ ] Enable grid snapping on node drag/move
-- [ ] Add keyboard shortcuts (AC: 2)
-  - [ ] Delete selected node with Delete/Backspace
-  - [ ] Save JSON with Ctrl/Cmd+S
-  - [ ] Export PNG with Ctrl/Cmd+E
-- [ ] Add UI hint panel for shortcuts (AC: 3)
-  - [ ] Render shortcut legend in the app shell
-- [ ] Ensure integration with existing validation/export rules (AC: 4)
-  - [ ] Keep export blocked when graph is invalid even via keyboard shortcut
+- [x] Add snap-to-grid editing behavior (AC: 1)
+  - [x] Enable grid snapping on node drag/move
+- [x] Add keyboard shortcuts (AC: 2)
+  - [x] Delete selected node with Delete/Backspace
+  - [x] Save JSON with Ctrl/Cmd+S
+  - [x] Export PNG with Ctrl/Cmd+E
+- [x] Add UI hint panel for shortcuts (AC: 3)
+  - [x] Render shortcut legend in the app shell
+- [x] Ensure integration with existing validation/export rules (AC: 4)
+  - [x] Keep export blocked when graph is invalid even via keyboard shortcut
 
 ## Dev Notes
 
@@ -52,8 +52,23 @@ GPT-5.3-Codex
 
 ### Debug Log References
 
+- npm run build
+
 ### Completion Notes List
+
+- Enabled snap-to-grid behavior in React Flow to improve node placement precision.
+- Added keyboard shortcuts for delete selected node, save JSON, and export PNG.
+- Added a visible shortcut legend panel in the app shell.
+- Reused existing export handlers so DAG validation guardrails still block invalid exports.
 
 ### File List
 
+- src/App.tsx
+- src/styles.css
+- README.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/2-2-graph-editor-productivity-tools.md
+
 ### Change Log
+
+- 2026-03-12: Implemented story 2.2 productivity controls and marked story ready for review.
