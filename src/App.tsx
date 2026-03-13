@@ -16,6 +16,8 @@ import {
   Position
 } from "reactflow";
 import { toJpeg, toPng } from "html-to-image";
+import { computeAutoLayout } from "./layout";
+import { resolveShortcutAction } from "./shortcuts";
 import "reactflow/dist/style.css";
 
 type TreeNodeData = {
@@ -174,84 +176,6 @@ function validateDagGraph(nodes: Node<TreeNodeData>[], edges: Edge[]): Validatio
     isValid: errors.length === 0,
     errors
   };
-}
-
-function computeAutoLayout(
-  nodes: Node<TreeNodeData>[],
-  edges: Edge[]
-): Map<string, { x: number; y: number }> {
-  const sortedNodes = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
-  const nodeIds = new Set(sortedNodes.map((node) => node.id));
-  const adjacency = new Map<string, string[]>(sortedNodes.map((node) => [node.id, []]));
-  const incoming = new Map<string, number>(sortedNodes.map((node) => [node.id, 0]));
-
-  for (const edge of edges) {
-    if (!nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
-      continue;
-    }
-    adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
-    incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
-  }
-
-  for (const [id, list] of adjacency.entries()) {
-    adjacency.set(id, [...list].sort((a, b) => a.localeCompare(b)));
-  }
-
-  const depth = new Map<string, number>(sortedNodes.map((node) => [node.id, 0]));
-  const queue = sortedNodes
-    .filter((node) => (incoming.get(node.id) ?? 0) === 0)
-    .map((node) => node.id)
-    .sort((a, b) => a.localeCompare(b));
-
-  const visited = new Set<string>();
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    visited.add(current);
-    const currentDepth = depth.get(current) ?? 0;
-
-    for (const child of adjacency.get(current) ?? []) {
-      const childDepth = depth.get(child) ?? 0;
-      if (childDepth < currentDepth + 1) {
-        depth.set(child, currentDepth + 1);
-      }
-      incoming.set(child, (incoming.get(child) ?? 0) - 1);
-      if ((incoming.get(child) ?? 0) === 0) {
-        queue.push(child);
-      }
-    }
-    queue.sort((a, b) => a.localeCompare(b));
-  }
-
-  // If cycles exist, place remaining nodes in later columns deterministically.
-  let maxDepth = Math.max(...depth.values(), 0);
-  const remaining = sortedNodes.map((node) => node.id).filter((id) => !visited.has(id));
-  for (const id of remaining) {
-    maxDepth += 1;
-    depth.set(id, maxDepth);
-  }
-
-  const byDepth = new Map<number, string[]>();
-  for (const node of sortedNodes) {
-    const d = depth.get(node.id) ?? 0;
-    byDepth.set(d, [...(byDepth.get(d) ?? []), node.id]);
-  }
-  for (const [d, ids] of byDepth.entries()) {
-    byDepth.set(d, [...ids].sort((a, b) => a.localeCompare(b)));
-  }
-
-  const positions = new Map<string, { x: number; y: number }>();
-  const depthKeys = [...byDepth.keys()].sort((a, b) => a - b);
-  for (const d of depthKeys) {
-    const ids = byDepth.get(d) ?? [];
-    ids.forEach((id, index) => {
-      positions.set(id, {
-        x: 120 + d * 270,
-        y: 80 + index * 170
-      });
-    });
-  }
-
-  return positions;
 }
 
 function TreeNode({ id, data }: { id: string; data: TreeNodeData }) {
@@ -449,32 +373,33 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      const key = event.key.toLowerCase();
-      const isModifier = event.ctrlKey || event.metaKey;
-      if (isTextInputFocused()) {
+      const action = resolveShortcutAction({
+        key: event.key,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey,
+        isTextInputFocused: isTextInputFocused(),
+        hasSelectedNode: Boolean(selectedNodeId)
+      });
+      if (!action) {
         return;
       }
 
-      if ((event.key === "Delete" || event.key === "Backspace") && selectedNodeId) {
-        event.preventDefault();
+      event.preventDefault();
+      if (action === "delete") {
         onDeleteSelected();
         return;
       }
-
-      if (isModifier && key === "s") {
-        event.preventDefault();
+      if (action === "save") {
         onSaveJson();
         return;
       }
-
-      if (isModifier && key === "e") {
-        event.preventDefault();
+      if (action === "exportPng") {
         void onExportPng();
         return;
       }
-
-      if (isModifier && key === "l") {
-        event.preventDefault();
+      if (action === "autoLayout") {
         onAutoLayout();
       }
     };
@@ -603,7 +528,7 @@ export default function App() {
         <strong>Shortcuts</strong>
         <span>Delete or Backspace: Delete selected node</span>
         <span>Ctrl+S: Save JSON</span>
-        <span>Ctrl+L: Auto Layout</span>
+        <span>Ctrl+Alt+L: Auto Layout</span>
         <span>Ctrl+E: Export PNG</span>
       </section>
 
