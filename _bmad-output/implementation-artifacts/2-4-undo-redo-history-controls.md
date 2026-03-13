@@ -1,6 +1,6 @@
 # Story 2.4: Undo/Redo History Controls
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,21 +19,21 @@ so that I can recover from mistakes and iterate on graph edits safely.
 
 ## Tasks / Subtasks
 
-- [ ] Add history state model for graph snapshots (AC: 1)
-  - [ ] Track `past`, `present`, and `future` graph snapshots
-  - [ ] Capture snapshots for core graph operations
-  - [ ] Clear redo stack when a new change is introduced
-- [ ] Add Undo and Redo actions (AC: 1, 2)
-  - [ ] Implement undo handler
-  - [ ] Implement redo handler
-  - [ ] Add toolbar buttons with disabled state logic
-- [ ] Add keyboard shortcuts (AC: 3)
-  - [ ] Map `Ctrl+Z` to undo
-  - [ ] Map `Ctrl+Shift+Z` to redo
-  - [ ] Prevent shortcut handling while typing in text inputs
-- [ ] Verify compatibility with existing flows (AC: 4)
-  - [ ] Confirm validation updates correctly after undo/redo
-  - [ ] Confirm export/save/load still work after history operations
+- [x] Add history state model for graph snapshots (AC: 1)
+  - [x] Track `past`, `present`, and `future` graph snapshots
+  - [x] Capture snapshots for core graph operations
+  - [x] Clear redo stack when a new change is introduced
+- [x] Add Undo and Redo actions (AC: 1, 2)
+  - [x] Implement undo handler
+  - [x] Implement redo handler
+  - [x] Add toolbar buttons with disabled state logic
+- [x] Add keyboard shortcuts (AC: 3)
+  - [x] Map `Ctrl+Z` to undo
+  - [x] Map `Ctrl+Shift+Z` to redo
+  - [x] Prevent shortcut handling while typing in text inputs
+- [x] Verify compatibility with existing flows (AC: 4)
+  - [x] Confirm validation updates correctly after undo/redo
+  - [x] Confirm export/save/load still work after history operations
 
 ## Dev Notes
 
@@ -59,8 +59,30 @@ GPT-5.3-Codex
 
 ### Debug Log References
 
+- npm test
+- npm run build
+
 ### Completion Notes List
+
+- Added graph history model with `past`, `present`, and `future` snapshots.
+- Implemented Undo/Redo toolbar actions with disabled states.
+- Added keyboard shortcuts `Ctrl+Z` and `Ctrl+Shift+Z` with text-input safety.
+- Kept validation/export/save/load behavior working after history operations.
+- Added targeted unit tests for history transitions and shortcut resolution.
 
 ### File List
 
+- src/App.tsx
+- src/history.ts
+- src/history.test.ts
+- src/shortcuts.ts
+- src/shortcuts.test.ts
+- README.md
+- package.json
+- package-lock.json
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/2-4-undo-redo-history-controls.md
+
 ### Change Log
+
+- 2026-03-12: Implemented story 2.4 undo/redo history controls and marked story ready for review.
