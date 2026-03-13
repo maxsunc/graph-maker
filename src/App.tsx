@@ -103,6 +103,15 @@ function makeUniqueId(base: string, used: Set<string>, prefix: string): string {
   return unique;
 }
 
+function isTextInputFocused(): boolean {
+  const active = document.activeElement;
+  if (!active) {
+    return false;
+  }
+  const tag = active.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea";
+}
+
 function validateDagGraph(nodes: Node<TreeNodeData>[], edges: Edge[]): ValidationResult {
   const errors: string[] = [];
   if (nodes.length === 0) {
@@ -304,7 +313,7 @@ export default function App() {
       pixelRatio: 2,
       backgroundColor: "transparent"
     });
-    downloadDataUrl(dataUrl, "tree-diagram.png");
+    downloadDataUrl(dataUrl, "graph-diagram.png");
   }, [validation.isValid]);
 
   const onExportJpg = useCallback(async () => {
@@ -321,7 +330,7 @@ export default function App() {
       backgroundColor: "#ffffff",
       quality: 0.95
     });
-    downloadDataUrl(dataUrl, "tree-diagram.jpg");
+    downloadDataUrl(dataUrl, "graph-diagram.jpg");
   }, [validation.isValid]);
 
   const onSaveJson = useCallback(() => {
@@ -342,7 +351,7 @@ export default function App() {
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    downloadDataUrl(url, "tree-diagram.json");
+    downloadDataUrl(url, "graph-diagram.json");
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }, [edges, nodes]);
 
@@ -354,6 +363,9 @@ export default function App() {
     const onKeyDown = (event: KeyboardEvent): void => {
       const key = event.key.toLowerCase();
       const isModifier = event.ctrlKey || event.metaKey;
+      if (isTextInputFocused()) {
+        return;
+      }
 
       if ((event.key === "Delete" || event.key === "Backspace") && selectedNodeId) {
         event.preventDefault();
@@ -495,8 +507,8 @@ export default function App() {
       <section className="shortcuts-panel">
         <strong>Shortcuts</strong>
         <span>Delete or Backspace: Delete selected node</span>
-        <span>Ctrl/Cmd+S: Save JSON</span>
-        <span>Ctrl/Cmd+E: Export PNG</span>
+        <span>Ctrl+S: Save JSON</span>
+        <span>Ctrl+E: Export PNG</span>
       </section>
 
       <input

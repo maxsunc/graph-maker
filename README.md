@@ -30,6 +30,11 @@ An interactive website for building directed graph diagrams with editable node t
 6. Live DAG graph validation rules: no cycles, required title+description for each node, and export blocking when invalid.
 7. Productivity upgrades: snap-to-grid editing and keyboard shortcuts for delete, save JSON, and export PNG.
 
+## Notes
+
+1. Current shortcut hints assume Windows key labels (`Ctrl+...`).
+2. Future enhancement: platform-aware shortcut hints (`Cmd` on macOS).
+
 ## Run Locally
 
 ```bash
