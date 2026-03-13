@@ -1,6 +1,6 @@
 # Story 2.4: Undo/Redo History Controls
 
-Status: review
+Status: done
 
 ## Story
 
@@ -69,6 +69,9 @@ GPT-5.3-Codex
 - Added keyboard shortcuts `Ctrl+Z` and `Ctrl+Shift+Z` with text-input safety.
 - Kept validation/export/save/load behavior working after history operations.
 - Added targeted unit tests for history transitions and shortcut resolution.
+- Refined drag history behavior so one drag gesture maps to one undo step.
+- Added no-op guard for auto-layout to avoid empty undo entries.
+- Added App integration tests for undo/redo compatibility with validation and save behavior.
 
 ### File List
 
@@ -77,12 +80,13 @@ GPT-5.3-Codex
 - src/history.test.ts
 - src/shortcuts.ts
 - src/shortcuts.test.ts
+- src/styles.css
+- src/App.integration.test.tsx
 - README.md
-- package.json
-- package-lock.json
 - _bmad-output/implementation-artifacts/sprint-status.yaml
 - _bmad-output/implementation-artifacts/2-4-undo-redo-history-controls.md
 
 ### Change Log
 
 - 2026-03-12: Implemented story 2.4 undo/redo history controls and marked story ready for review.
+- 2026-03-12: Applied code-review fixes for drag history granularity, no-op auto-layout tracking, and integration test coverage.

@@ -228,6 +228,7 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+  const dragStartSnapshotRef = useRef<GraphSnapshot | null>(null);
 
   const applyPresentUpdate = useCallback(
     (updater: (present: GraphSnapshot) => GraphSnapshot, shouldTrack = true) => {
@@ -299,7 +300,7 @@ export default function App() {
   const nodeTypes = useMemo(() => ({ treeNode: TreeNode }), []);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    const shouldTrack = changes.some((change) => change.type !== "select");
+    const shouldTrack = changes.some((change) => change.type !== "select" && change.type !== "position");
     applyPresentUpdate(
       (present) => ({
         ...present,
@@ -308,6 +309,44 @@ export default function App() {
       shouldTrack
     );
   }, [applyPresentUpdate]);
+
+  const onNodeDragStart = useCallback(() => {
+    dragStartSnapshotRef.current = {
+      nodes,
+      edges
+    };
+  }, [edges, nodes]);
+
+  const onNodeDragStop = useCallback(() => {
+    const dragStartSnapshot = dragStartSnapshotRef.current;
+    dragStartSnapshotRef.current = null;
+    if (!dragStartSnapshot) {
+      return;
+    }
+
+    setHistoryState((current) => {
+      const startById = new Map(
+        dragStartSnapshot.nodes.map((node) => [node.id, node.position])
+      );
+      const moved = current.present.nodes.some((node) => {
+        const startPosition = startById.get(node.id);
+        return (
+          startPosition &&
+          (startPosition.x !== node.position.x || startPosition.y !== node.position.y)
+        );
+      });
+
+      if (!moved) {
+        return current;
+      }
+
+      return {
+        past: [...current.past, dragStartSnapshot],
+        present: current.present,
+        future: []
+      };
+    });
+  }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     const shouldTrack = changes.some((change) => change.type !== "select");
@@ -341,16 +380,16 @@ export default function App() {
         ...present,
         nodes: [
           ...present.nodes,
-        {
-          id,
-          type: "treeNode",
-          position: nextNodePosition(present.nodes.length),
-          data: {
-            title: `Node ${present.nodes.length + 1}`,
-            description: "",
-            onChange: updateNodeData
+          {
+            id,
+            type: "treeNode",
+            position: nextNodePosition(present.nodes.length),
+            data: {
+              title: `Node ${present.nodes.length + 1}`,
+              description: "",
+              onChange: updateNodeData
+            }
           }
-        }
         ]
       };
     });
@@ -432,6 +471,16 @@ export default function App() {
   const onAutoLayout = useCallback(() => {
     applyPresentUpdate((present) => {
       const positions = computeAutoLayout(present.nodes, present.edges);
+      const changed = present.nodes.some((node) => {
+        const nextPosition = positions.get(node.id);
+        return (
+          nextPosition &&
+          (nextPosition.x !== node.position.x || nextPosition.y !== node.position.y)
+        );
+      });
+      if (!changed) {
+        return present;
+      }
       return {
         ...present,
         nodes: present.nodes.map((node) => ({
@@ -659,6 +708,8 @@ export default function App() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDragStop={onNodeDragStop}
           onNodeClick={(_, node) => setSelectedNodeId(node.id)}
           onPaneClick={() => setSelectedNodeId(null)}
           fitView
